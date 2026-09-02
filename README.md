@@ -1,4 +1,4 @@
-# Fantacalcio Assistant
+# Fantaly
 
 A Django-based decision-support tool for fantasy football (Fantacalcio) managers,
 built around the player auction, following the product spec in `AGENTS.md`.
