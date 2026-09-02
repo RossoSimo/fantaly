@@ -9,3 +9,17 @@ body {
 .card {
     border-radius: 0.75rem;
 }
+
+.player-table {
+    font-size: 0.925rem;
+}
+
+.player-table thead th a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.player-table thead th a:hover,
+.player-table thead th a:focus {
+    text-decoration: underline;
+}

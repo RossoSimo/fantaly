@@ -224,5 +224,10 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'stats': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }

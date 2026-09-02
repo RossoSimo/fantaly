@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ player.display_name }}{% endblock %}
 {% block content %}
+<p class="mb-2"><a href="{% url 'players:list' %}">← Players</a></p>
 <h1 class="h4 mb-1">{{ player.display_name }}</h1>
 <p class="text-muted">{{ player.full_name }} — {{ player.club|default:"Free agent" }} — {{ player.get_position_display }}</p>
 
@@ -30,15 +31,41 @@
     <div class="col-12 col-md-6 mb-3">
         <div class="card h-100">
             <div class="card-body">
-                <h2 class="h6">Status history</h2>
-                {% if player.statuses.all %}
-                <ul class="list-unstyled small mb-0">
-                    {% for status in player.statuses.all|slice:":5" %}
-                    <li>{{ status.season }} — <strong>{{ status.get_status_display }}</strong> ({{ status.created_at|date:"Y-m-d H:i" }})</li>
-                    {% endfor %}
-                </ul>
+                <h2 class="h6">Current status</h2>
+                {% if current_status %}
+                <p class="mb-1">
+                    <strong>{{ current_status.get_status_display }}</strong>
+                    {% if current_status.is_confirmed %}
+                    <span class="badge text-bg-success">Confirmed</span>
+                    {% else %}
+                    <span class="badge text-bg-warning">Unconfirmed</span>
+                    {% endif %}
+                </p>
+                <p class="small text-muted mb-0">
+                    {{ current_status.season }} · {{ current_status.created_at|date:"Y-m-d H:i" }}
+                    {% if current_status.source %} · {{ current_status.source }}{% endif %}
+                </p>
                 {% else %}
                 <p class="text-muted small mb-0">No status signals recorded yet.</p>
+                {% endif %}
+
+                <h3 class="h6 mt-3">Prices</h3>
+                {% if estimated_quotation %}
+                <p class="small mb-1">
+                    Estimated quotation: <strong>{{ estimated_quotation.price }}</strong>
+                    <span class="text-muted">({{ estimated_quotation.source|default:"estimate" }}, {{ estimated_quotation.observed_at }})</span>
+                </p>
+                {% else %}
+                <p class="small text-muted mb-1">No estimated quotation recorded.</p>
+                {% endif %}
+                {% if market_summary and market_summary.observation_count %}
+                <p class="small mb-0">
+                    Observed market: avg {{ market_summary.average|floatformat:1 }}
+                    · median {{ market_summary.median|floatformat:1 }}
+                    · n={{ market_summary.observation_count }}
+                </p>
+                {% else %}
+                <p class="small text-muted mb-0">No observed auction prices yet — estimates are not shown as market prices.</p>
                 {% endif %}
             </div>
         </div>
@@ -48,26 +75,76 @@
 <div class="card mb-3">
     <div class="card-body">
         <h2 class="h6">Season statistics</h2>
-        {% if player.season_stats.all %}
+        {% if season_stats %}
         <div class="table-responsive">
-            <table class="table table-sm">
-                <thead><tr><th>Season</th><th>App.</th><th>Goals</th><th>Assists</th><th>Fantasy avg.</th></tr></thead>
+            <table class="table table-sm player-table">
+                <thead>
+                    <tr>
+                        <th>Season</th>
+                        <th>Club</th>
+                        <th>Pos</th>
+                        <th class="text-end">App</th>
+                        <th class="text-end">Starts</th>
+                        <th class="text-end">Min</th>
+                        <th class="text-end">G</th>
+                        <th class="text-end">A</th>
+                        <th class="text-end">YC</th>
+                        <th class="text-end">RC</th>
+                        <th class="text-end">OG</th>
+                        <th class="text-end">CS</th>
+                        <th class="text-end">Missed</th>
+                        <th class="text-end">Pts</th>
+                        <th class="text-end">MV</th>
+                        <th class="text-end">FM</th>
+                        <th>Updated</th>
+                    </tr>
+                </thead>
                 <tbody>
-                {% for stats in player.season_stats.all %}
+                {% for stats in season_stats %}
                     <tr>
                         <td>{{ stats.season }}</td>
-                        <td>{{ stats.appearances }}</td>
-                        <td>{{ stats.goals }}</td>
-                        <td>{{ stats.assists }}</td>
-                        <td>{{ stats.fantasy_average|default:"—" }}</td>
+                        <td>{{ stats.club|default:"—" }}</td>
+                        <td>{{ stats.get_position_display }}</td>
+                        <td class="text-end">{{ stats.appearances }}</td>
+                        <td class="text-end">{{ stats.starts }}</td>
+                        <td class="text-end">{{ stats.minutes }}</td>
+                        <td class="text-end">{{ stats.goals }}</td>
+                        <td class="text-end">{{ stats.assists }}</td>
+                        <td class="text-end">{{ stats.yellow_cards }}</td>
+                        <td class="text-end">{{ stats.red_cards }}</td>
+                        <td class="text-end">{{ stats.own_goals }}</td>
+                        <td class="text-end">{{ stats.clean_sheets|default_if_none:"—" }}</td>
+                        <td class="text-end">{{ stats.matches_missed }}</td>
+                        <td class="text-end">{{ stats.fantasy_points }}</td>
+                        <td class="text-end">{{ stats.average_rating|default_if_none:"—" }}</td>
+                        <td class="text-end">{{ stats.fantasy_average|default_if_none:"—" }}</td>
+                        <td>{{ stats.updated_at|date:"Y-m-d H:i" }}</td>
                     </tr>
                 {% endfor %}
                 </tbody>
             </table>
         </div>
         {% else %}
-        <p class="text-muted small mb-0">No statistics recorded yet.</p>
+        <p class="text-muted small mb-0">No statistics recorded yet. Import a fantacalcio.it stats workbook with <code>manage.py import_stats</code>.</p>
         {% endif %}
     </div>
 </div>
+
+{% if player.statuses.all %}
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">Status history</h2>
+        <ul class="list-unstyled small mb-0">
+            {% for status in player.statuses.all|slice:":8" %}
+            <li>
+                {{ status.season }} —
+                <strong>{{ status.get_status_display }}</strong>
+                ({{ status.created_at|date:"Y-m-d H:i" }})
+                {% if not status.is_confirmed %}<span class="badge text-bg-warning">Unconfirmed</span>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

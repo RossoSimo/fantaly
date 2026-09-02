@@ -5,6 +5,7 @@ from django.test import TestCase
 from players.models import Position
 from seasons.models import Season
 from stats.models import PlayerSeasonStats, PlayerStatus, PlayerStatusValue
+from stats.services import upsert_player_season_stats
 from testing_utils import make_player, make_season
 
 
@@ -31,6 +32,27 @@ class PlayerSeasonStatsIsolationTests(TestCase):
         last_row = PlayerSeasonStats.objects.get(player=player, season=last_season)
         self.assertEqual(last_row.goals, 10)
         self.assertEqual(last_row.fantasy_average, Decimal('7.00'))
+
+    def test_upsert_refreshes_only_the_targeted_season(self):
+        player = make_player('Upsert Player', position=Position.FORWARD)
+        last_season = make_season(label='2025/2026', year_start=2025)
+        this_season = make_season(label='2026/2027', year_start=2026)
+        PlayerSeasonStats.objects.create(
+            player=player, season=last_season, position=Position.FORWARD, goals=10,
+        )
+
+        upsert_player_season_stats(
+            player=player, season=this_season, position=Position.FORWARD, goals=4, appearances=8,
+        )
+        upsert_player_season_stats(
+            player=player, season=this_season, position=Position.FORWARD, goals=5, appearances=9,
+        )
+
+        self.assertEqual(PlayerSeasonStats.objects.filter(player=player).count(), 2)
+        self.assertEqual(PlayerSeasonStats.objects.get(player=player, season=last_season).goals, 10)
+        current_row = PlayerSeasonStats.objects.get(player=player, season=this_season)
+        self.assertEqual(current_row.goals, 5)
+        self.assertEqual(current_row.appearances, 9)
 
     def test_a_player_can_only_have_one_stats_row_per_season(self):
         player = make_player('Unique Stats', position=Position.FORWARD)

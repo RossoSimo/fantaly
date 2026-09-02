@@ -7,11 +7,13 @@
 </div>
 
 <form method="get" class="row g-2 mb-3">
-    <div class="col-8 col-md-6">
-        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search name, alias, club...">
+    <div class="col-12 col-md-3">
+        <label class="form-label visually-hidden" for="player-search">Search players</label>
+        <input id="player-search" type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search name, alias, club...">
     </div>
-    <div class="col-4 col-md-3">
-        <select name="position" class="form-select">
+    <div class="col-6 col-md-2">
+        <label class="form-label visually-hidden" for="player-position">Position</label>
+        <select id="player-position" name="position" class="form-select">
             <option value="">All positions</option>
             <option value="GK" {% if position == 'GK' %}selected{% endif %}>Goalkeeper</option>
             <option value="DEF" {% if position == 'DEF' %}selected{% endif %}>Defender</option>
@@ -19,31 +21,96 @@
             <option value="FWD" {% if position == 'FWD' %}selected{% endif %}>Forward</option>
         </select>
     </div>
-    <div class="col-4 col-md-2">
-        <button type="submit" class="btn btn-outline-secondary w-100">Search</button>
+    <div class="col-6 col-md-2">
+        <label class="form-label visually-hidden" for="player-club">Club</label>
+        <select id="player-club" name="club" class="form-select">
+            <option value="">All clubs</option>
+            {% for team in teams %}
+            <option value="{{ team.pk }}" {% if club_id == team.pk|stringformat:"s" %}selected{% endif %}>{{ team.name }}</option>
+            {% endfor %}
+        </select>
     </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label visually-hidden" for="player-season">Stats season</label>
+        <select id="player-season" name="season" class="form-select">
+            {% for season in seasons %}
+            <option value="{{ season.label }}" {% if stats_season and stats_season.pk == season.pk %}selected{% endif %}>{{ season.label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label visually-hidden" for="player-active">Availability</label>
+        <select id="player-active" name="active" class="form-select">
+            <option value="1" {% if active == '1' %}selected{% endif %}>Active</option>
+            <option value="0" {% if active == '0' %}selected{% endif %}>Inactive</option>
+            <option value="" {% if active == '' %}selected{% endif %}>All</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-1">
+        <button type="submit" class="btn btn-outline-secondary w-100">Filter</button>
+    </div>
+    {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+    {% if dir %}<input type="hidden" name="dir" value="{{ dir }}">{% endif %}
 </form>
 
-<div class="list-group">
-    {% for player in players %}
-    <a href="{% url 'players:detail' player.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between">
-        <span><strong>{{ player.display_name }}</strong> — {{ player.club|default:"Free agent" }} — {{ player.get_position_display }}</span>
-        {% if not player.is_active %}<span class="badge bg-secondary">Inactive</span>{% endif %}
-    </a>
-    {% empty %}
-    <p class="text-muted">No players match your search.</p>
-    {% endfor %}
+<p class="text-muted small mb-2">
+    {% if stats_season %}
+        Showing statistics for <strong>{{ stats_season.label }}</strong>.
+        Quotation is the latest estimated listone price, not an observed auction price.
+    {% else %}
+        No season is configured yet — statistics columns will stay empty until you import a season.
+    {% endif %}
+</p>
+
+<div class="table-responsive">
+    <table class="table table-sm table-hover align-middle player-table">
+        <thead>
+            <tr>
+                <th scope="col"><a href="?{% if sort_query %}{{ sort_query }}&{% endif %}sort=name&dir={% if sort == 'name' and dir == 'asc' %}desc{% else %}asc{% endif %}">Player</a></th>
+                <th scope="col"><a href="?{% if sort_query %}{{ sort_query }}&{% endif %}sort=club&dir={% if sort == 'club' and dir == 'asc' %}desc{% else %}asc{% endif %}">Club</a></th>
+                <th scope="col"><a href="?{% if sort_query %}{{ sort_query }}&{% endif %}sort=position&dir={% if sort == 'position' and dir == 'asc' %}desc{% else %}asc{% endif %}">Pos</a></th>
+                <th scope="col" class="text-end"><a href="?{% if sort_query %}{{ sort_query }}&{% endif %}sort=appearances&dir={% if sort == 'appearances' and dir == 'asc' %}desc{% else %}asc{% endif %}">App</a></th>
+                <th scope="col" class="text-end"><a href="?{% if sort_query %}{{ sort_query }}&{% endif %}sort=goals&dir={% if sort == 'goals' and dir == 'asc' %}desc{% else %}asc{% endif %}">G</a></th>
+                <th scope="col" class="text-end"><a href="?{% if sort_query %}{{ sort_query }}&{% endif %}sort=assists&dir={% if sort == 'assists' and dir == 'asc' %}desc{% else %}asc{% endif %}">A</a></th>
+                <th scope="col" class="text-end"><a href="?{% if sort_query %}{{ sort_query }}&{% endif %}sort=average_rating&dir={% if sort == 'average_rating' and dir == 'asc' %}desc{% else %}asc{% endif %}">MV</a></th>
+                <th scope="col" class="text-end"><a href="?{% if sort_query %}{{ sort_query }}&{% endif %}sort=fantasy_average&dir={% if sort == 'fantasy_average' and dir == 'asc' %}desc{% else %}asc{% endif %}">FM</a></th>
+                <th scope="col" class="text-end"><a href="?{% if sort_query %}{{ sort_query }}&{% endif %}sort=quotation&dir={% if sort == 'quotation' and dir == 'asc' %}desc{% else %}asc{% endif %}">Qt.A <span class="fw-normal text-muted">(est.)</span></a></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in players %}
+            <tr>
+                <td>
+                    <a href="{% url 'players:detail' player.pk %}">{{ player.display_name }}</a>
+                    {% if not player.is_active %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}
+                </td>
+                <td>{{ player.club|default:"Free agent" }}</td>
+                <td>{{ player.get_position_display }}</td>
+                <td class="text-end">{{ player.stats_appearances|default_if_none:"—" }}</td>
+                <td class="text-end">{{ player.stats_goals|default_if_none:"—" }}</td>
+                <td class="text-end">{{ player.stats_assists|default_if_none:"—" }}</td>
+                <td class="text-end">{{ player.stats_average_rating|default_if_none:"—" }}</td>
+                <td class="text-end">{{ player.stats_fantasy_average|default_if_none:"—" }}</td>
+                <td class="text-end">{{ player.quotation|default_if_none:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9" class="text-muted">No players match your search.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 {% if is_paginated %}
-<nav class="mt-3">
+<nav class="mt-3" aria-label="Player list pages">
     <ul class="pagination">
         {% if page_obj.has_previous %}
-        <li class="page-item"><a class="page-link" href="?q={{ query }}&position={{ position }}&page={{ page_obj.previous_page_number }}">Previous</a></li>
+        <li class="page-item"><a class="page-link" href="?{{ filter_query }}&page={{ page_obj.previous_page_number }}">Previous</a></li>
         {% endif %}
         <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
         {% if page_obj.has_next %}
-        <li class="page-item"><a class="page-link" href="?q={{ query }}&position={{ position }}&page={{ page_obj.next_page_number }}">Next</a></li>
+        <li class="page-item"><a class="page-link" href="?{{ filter_query }}&page={{ page_obj.next_page_number }}">Next</a></li>
         {% endif %}
     </ul>
 </nav>

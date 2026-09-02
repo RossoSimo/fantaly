@@ -56,10 +56,10 @@ def resolve_player(record: ExternalPlayerRecord) -> MatchResult:
     this function never creates or merges Player records.
     """
     result = (
-        _match_by_external_id(record)
-        or _match_by_club_and_name(record)
-        or _match_by_name(record)
-        or _match_by_fuzzy_name(record)
+            _match_by_external_id(record)
+            or _match_by_club_and_name(record)
+            or _match_by_name(record)
+            or _match_by_fuzzy_name(record)
     )
     if result is None:
         result = MatchResult(player=None, method=MatchMethod.FUZZY, confidence=None)
@@ -102,13 +102,24 @@ def _match_by_name(record: ExternalPlayerRecord) -> MatchResult | None:
 
 
 def _match_by_fuzzy_name(record: ExternalPlayerRecord) -> MatchResult | None:
+    """Last-resort fuzzy match. When a club is known, the candidate pool
+    is restricted to players at that club — a shared surname across
+    *different* clubs (e.g. two unrelated players both called "Martinez")
+    is exactly the kind of collision fuzzy matching must not paper over.
+    Without a club hint, it falls back to the full player pool, since
+    that's genuinely the only signal available.
+    """
     if not record.full_name:
         return None
+    candidate_qs = Player.objects.only('id', 'full_name', 'display_name', 'club')
+    if record.club_name:
+        candidate_qs = candidate_qs.filter(club__name__iexact=record.club_name)
+
     best_player = None
     best_ratio = 0.0
     tied = False
     target = record.full_name.strip().lower()
-    for player in Player.objects.only('id', 'full_name', 'display_name'):
+    for player in candidate_qs:
         for candidate_name in (player.full_name, player.display_name):
             ratio = SequenceMatcher(None, target, candidate_name.strip().lower()).ratio()
             if ratio > best_ratio:
