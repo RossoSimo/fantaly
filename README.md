@@ -1,7 +1,7 @@
 # Fantaly
 
 A Django-based decision-support tool for fantasy football (Fantacalcio) managers,
-built around the player auction, following the product spec in `AGENTS.md`.
+built around the player auction, following the product spec in `AGENTS.md` (initializated with AI tools).
 
 The app is an **assistant**, not an auction administrator: it doesn't run or
 enforce the auction — it records what a user reports happened, calculates
