@@ -1,5 +1,5 @@
 """
-Django settings for the fantacalcio project.
+Django settings for the fantaly project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/5.2/topics/settings/

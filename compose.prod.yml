@@ -1,0 +1,78 @@
+services:
+
+  web:
+    image: ${FANTALY_IMAGE:-ghcr.io/rossosimo/fantaly:latest}
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    expose:
+      - "8000"
+    volumes:
+      - static_data:/app/staticfiles
+      - media_data:/app/media
+    networks:
+      - backend
+      - db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_data:/static:ro
+      - media_data:/media:ro
+    expose:
+      - "80"
+    networks:
+      - proxy
+      - backend
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - nginx
+    networks:
+      - proxy
+
+
+volumes:
+  postgres_data:
+  static_data:
+  media_data:
+
+
+networks:
+  proxy:
+    external: true
+    name: fantaly_proxy
+
+  backend:
+    external: true
+    name: fantaly_backend
+
+  db:
+    external: true
+    name: fantaly_db
