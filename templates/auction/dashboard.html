@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load auction_extras %}
+{% block title %}Auction — {{ league.name }}{% endblock %}
+{% block content %}
+<h1 class="h5 mb-3">{{ league.name }} — Auction board</h1>
+
+<div class="row">
+    <div class="col-12 col-lg-7 order-1">
+        {% if open_nomination %}
+        <div class="card mb-3 border-primary">
+            <div class="card-body">
+                <h2 class="h5">{{ open_nomination.player.display_name }}</h2>
+                <p class="text-muted mb-2">
+                    {{ open_nomination.player.get_position_display }} — {{ open_nomination.player.club|default:"Free agent" }}
+                </p>
+                <form method="post" action="{% url 'auction:confirm_purchase' league.pk open_nomination.pk %}" class="row g-2 align-items-end">
+                    {% csrf_token %}
+                    <div class="col-6">
+                        <label class="form-label small">Winning manager</label>
+                        <select name="manager_id" class="form-select" required>
+                            {% for manager in managers %}
+                                {% with budget=budgets|dictitem:manager.pk %}
+                                <option value="{{ manager.pk }}">{{ manager.name }} ({{ budget.remaining_credits }} credits left)</option>
+                                {% endwith %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small">Winning bid</label>
+                        <input type="number" step="0.01" min="0" name="price" class="form-control" required>
+                    </div>
+                    <div class="col-2">
+                        <button type="submit" class="btn btn-success w-100">Confirm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h6">Nominate a player</h2>
+                <form method="post" action="{% url 'auction:nominate' league.pk %}" class="row g-2">
+                    {% csrf_token %}
+                    <div class="col-8">
+                        <select name="player_id" class="form-select" required>
+                            {% for player in available_players %}
+                                <option value="{{ player.pk }}">{{ player.display_name }} — {{ player.get_position_display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <button type="submit" class="btn btn-primary w-100">Nominate</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <h2 class="h6">Recent purchases</h2>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead><tr><th>Player</th><th>Manager</th><th>Price</th></tr></thead>
+                <tbody>
+                {% for txn in recent_purchases %}
+                    <tr><td>{{ txn.player.display_name }}</td><td>{{ txn.manager.name }}</td><td>{{ txn.price }}</td></tr>
+                {% empty %}
+                    <tr><td colspan="3" class="text-muted">No purchases yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-5 order-2">
+        <h2 class="h6">Manager budgets</h2>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead><tr><th>Manager</th><th>Spent</th><th>Left</th><th>Slots left</th></tr></thead>
+                <tbody>
+                {% for manager in managers %}
+                    {% with budget=budgets|dictitem:manager.pk %}
+                    <tr>
+                        <td>{{ manager.name }}</td>
+                        <td>{{ budget.total_spent }}</td>
+                        <td><strong>{{ budget.remaining_credits }}</strong></td>
+                        <td>{{ budget.remaining_slots }}</td>
+                    </tr>
+                    {% endwith %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

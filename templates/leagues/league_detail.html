@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ league.name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">{{ league.name }} <small class="text-muted">{{ league.season }}</small></h1>
+    <div>
+        <a href="{% url 'players:list' %}" class="btn btn-outline-secondary">Players</a>
+        <a href="{% url 'auction:dashboard' league.pk %}" class="btn btn-success">Open auction board</a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6">League configuration</h2>
+                <ul class="list-unstyled mb-0 small">
+                    <li>Initial credits: <strong>{{ league.initial_credits }}</strong></li>
+                    <li>Squad size: <strong>{{ league.squad_size }}</strong> (GK {{ league.slots_goalkeepers }} / DEF {{
+                        league.slots_defenders }} / MID {{ league.slots_midfielders }} / FWD {{ league.slots_forwards
+                        }})</li>
+                    <li>Min bid: <strong>{{ league.min_bid }}</strong>{% if league.max_bid %} · Max bid: <strong>{{
+                            league.max_bid }}</strong>{% endif %}</li>
+                    <li>Overspend allowed: <strong>{{ league.allow_overspend|yesno:"Yes,No" }}</strong></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h2 class="h6">Managers</h2>
+{% if league.managers.all %}
+<div class="table-responsive">
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for manager in league.managers.all %}
+            <tr>
+                <td>{{ manager.name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-muted">No managers yet — add one below.</p>
+{% endif %}
+
+<form method="post" action="{% url 'leagues:add_manager' league.pk %}" class="row g-2 mt-2">
+    {% csrf_token %}
+    <div class="col-8 col-md-4">
+        <input type="text" name="name" class="form-control" placeholder="Manager name" required>
+    </div>
+    <div class="col-4 col-md-2">
+        <button type="submit" class="btn btn-outline-primary w-100">Add manager</button>
+    </div>
+</form>
+{% endblock %}

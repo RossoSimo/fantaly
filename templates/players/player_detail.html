@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ player.display_name }}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-1">{{ player.display_name }}</h1>
+<p class="text-muted">{{ player.full_name }} — {{ player.club|default:"Free agent" }} — {{ player.get_position_display }}</p>
+
+<div class="row">
+    <div class="col-12 col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6">Identity</h2>
+                <ul class="list-unstyled small mb-0">
+                    <li>Nationality: {{ player.nationality|default:"—" }}</li>
+                    <li>Date of birth: {{ player.date_of_birth|default:"—" }}</li>
+                    <li>Previous club: {{ player.previous_club|default:"—" }}</li>
+                    <li>Active: {{ player.is_active|yesno:"Yes,No" }}</li>
+                </ul>
+                {% if player.aliases.all %}
+                <h3 class="h6 mt-3">Aliases</h3>
+                <ul class="list-unstyled small mb-0">
+                    {% for alias in player.aliases.all %}
+                    <li>{{ alias.alias }} <span class="text-muted">({{ alias.get_alias_type_display }})</span></li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6">Status history</h2>
+                {% if player.statuses.all %}
+                <ul class="list-unstyled small mb-0">
+                    {% for status in player.statuses.all|slice:":5" %}
+                    <li>{{ status.season }} — <strong>{{ status.get_status_display }}</strong> ({{ status.created_at|date:"Y-m-d H:i" }})</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted small mb-0">No status signals recorded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">Season statistics</h2>
+        {% if player.season_stats.all %}
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead><tr><th>Season</th><th>App.</th><th>Goals</th><th>Assists</th><th>Fantasy avg.</th></tr></thead>
+                <tbody>
+                {% for stats in player.season_stats.all %}
+                    <tr>
+                        <td>{{ stats.season }}</td>
+                        <td>{{ stats.appearances }}</td>
+                        <td>{{ stats.goals }}</td>
+                        <td>{{ stats.assists }}</td>
+                        <td>{{ stats.fantasy_average|default:"—" }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted small mb-0">No statistics recorded yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

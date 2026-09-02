@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Add player{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Add player</h1>
+<form method="post" class="row g-3">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+        <div class="col-12 col-md-6">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field.errors }}
+            <div>{{ field }}</div>
+        </div>
+    {% endfor %}
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Save player</button>
+    </div>
+</form>
+{% endblock %}

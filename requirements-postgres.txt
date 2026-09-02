@@ -1,0 +1,4 @@
+# Install alongside requirements.txt only when running against PostgreSQL
+# (i.e. when DJANGO_DB_ENGINE=postgresql is set — see .env.example).
+# Not needed for local development or tests, which default to SQLite.
+psycopg[binary]==3.2.3
